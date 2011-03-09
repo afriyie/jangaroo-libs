@@ -44,30 +44,24 @@ public class BitmapData implements IBitmapDrawable {
   /**
    * The height of the bitmap image in pixels.
    */
-  public function get height():int {
-    return _height;
-  }
+  public native function get height():int;
 
   /**
    * The rectangle that defines the size and location of the bitmap image. The top and left of the rectangle are 0; the width and height are equal to the width and height in pixels of the BitmapData object.
    */
   public function get rect():Rectangle {
-    return new Rectangle(0, 0, _width, _height);
+    return new Rectangle(0, 0, width, height);
   }
 
   /**
    * Defines whether the bitmap image supports per-pixel transparency. You can set this value only when you construct a BitmapData object by passing in <code>true</code> for the <code>transparent</code> parameter of the constructor. Then, after you create a BitmapData object, you can check whether it supports per-pixel transparency by determining if the value of the <code>transparent</code> property is <code>true</code>.
    */
-  public function get transparent():Boolean {
-    return _transparent;
-  }
+  public native function get transparent():Boolean;
 
   /**
    * The width of the bitmap image in pixels.
    */
-  public function get width():int {
-    return _width;
-  }
+  public native function get width():int;
 
   /**
    * Creates a BitmapData object with a specified width and height. If you specify a value for the <code>fillColor</code> parameter, every pixel in the bitmap is set to that color.
@@ -82,9 +76,9 @@ public class BitmapData implements IBitmapDrawable {
    *
    */
   public function BitmapData(width:int, height:int, transparent:Boolean = true, fillColor:uint = 0xFFFFFFFF) {
-    _transparent = transparent;
-    _width = width;
-    _height = height;
+    this.transparent = transparent;
+    this.width = width;
+    this.height = height;
     _alpha = transparent ? (fillColor >>> 24) / 0xFF : 1;
     _fillColor = fillColor & 0xFFFFFF;
   }
@@ -388,15 +382,19 @@ public class BitmapData implements IBitmapDrawable {
     var context:CanvasRenderingContext2D;
     var destRect:Rectangle = new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
     destRect = destRect.intersection(rect);
+    destRect.width = Math.floor(destRect.width);
+    destRect.height = Math.floor(destRect.height);
     if (destRect.width > 0 && destRect.height > 0) {
+      var sx:Number = sourceRect.x + (destRect.left - destPoint.x);
+      var sy:Number = sourceRect.y + (destRect.top - destPoint.y);
       if (!sourceBitmapData.isCanvas) {
         if (destRect.equals(rect) && (!isCanvas || !mergeAlpha)) {
           // the whole Bitmap is to become a copy of (a clipping of) the source bitmap
           _fillColor = sourceBitmapData._fillColor;
           _alpha = sourceBitmapData._alpha;
           image = sourceBitmapData.image;
-          imageOffsetX = sourceRect.x + sourceBitmapData.imageOffsetX;
-          imageOffsetY = sourceRect.y + sourceBitmapData.imageOffsetY;
+          imageOffsetX = sx + sourceBitmapData.imageOffsetX;
+          imageOffsetY = sy + sourceBitmapData.imageOffsetY;
           if (elem) {
             asDiv(); // updates existing div
           }
@@ -410,19 +408,20 @@ public class BitmapData implements IBitmapDrawable {
           }
           if (sourceBitmapData.image) {
             // then, draw source image onto destination rectangle:
-            context.drawImage(sourceBitmapData.image, sourceRect.x, sourceRect.y, destRect.width, destRect.height,
-              destPoint.x, destPoint.y, destRect.width, destRect.height);
+            context.drawImage(sourceBitmapData.image, sx + sourceBitmapData.imageOffsetX, sy + sourceBitmapData.imageOffsetY,
+              destRect.width, destRect.height,
+              destRect.left, destRect.top, destRect.width, destRect.height);
           }
         }
       } else {
         context = getContext();
         if (mergeAlpha) {
           // putImageData() does not support alpha channel, so use drawImage():
-          context.drawImage(sourceBitmapData.asCanvas(), sourceRect.x, sourceRect.y, destRect.width, destRect.height,
-            destPoint.x, destPoint.y, destRect.width, destRect.height);
+          context.drawImage(sourceBitmapData.asCanvas(), sx, sy, destRect.width, destRect.height,
+            destRect.x, destRect.y, destRect.width, destRect.height);
         } else {
-          var imageData:ImageData = sourceBitmapData.getContext().getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
-          context.putImageData(imageData, destPoint.x, destPoint.y);
+          var imageData:ImageData = sourceBitmapData.getContext().getImageData(sx, sy, destRect.width, destRect.height);
+          context.putImageData(imageData, destRect.x, destRect.y);
         }
       }
     }
@@ -504,7 +503,7 @@ public class BitmapData implements IBitmapDrawable {
       bitmapData = source as BitmapData;
     }
     var element:HTMLElement = bitmapData ?
-      bitmapData.image || bitmapData.elem :
+      bitmapData.image || bitmapData.elem || bitmapData.asDiv() :
       DisplayObject(source).getElement();
     var context:CanvasRenderingContext2D = getContext();
     if (matrix) {
@@ -514,12 +513,12 @@ public class BitmapData implements IBitmapDrawable {
     if (element is HTMLImageElement || element is HTMLCanvasElement) {
       context.drawImage(element, 0, 0);
     } else {
+      if (element.style.backgroundColor) {
+        context.fillStyle = element.style.backgroundColor;
+        context.fillRect(0, 0, source['width'], source['height']);
+      }
       var text:String = element['textContent'];
       if (text) {
-        if (element.style.backgroundColor) {
-          context.fillStyle = element.style.backgroundColor;
-          context.fillRect(0, 0, _width, _height);
-        }
         context.fillStyle = element.style.color;
         context.font = element.style.font;
         context.textBaseline = "top";
@@ -1277,6 +1276,21 @@ public class BitmapData implements IBitmapDrawable {
     // TODO: see lock()
   }
 
+  /**
+   * @private
+   */
+  public native function set transparent(value:Boolean):void;
+
+  /**
+   * @private
+   */
+  public native function set width(value:int):void;
+
+  /**
+   * @private
+   */
+  public native function set height(value:int):void;
+
   private const elementChangeListeners:Array = [];
 
   internal function getElement():HTMLElement {
@@ -1305,16 +1319,23 @@ public class BitmapData implements IBitmapDrawable {
   }
 
   public function asDiv():HTMLElement {
+    var url:String;
     if (!elem || isCanvas) {
+      if (isCanvas) {
+        url = asCanvas().toDataURL();
+      }
       isCanvas = false;
       var div:HTMLElement = HTMLElement(window.document.createElement("DIV"));
       div.style.position = "absolute";
-      div.style.width = _width + "px";
-      div.style.height = _height + "px";
+      div.style.width = width + "px";
+      div.style.height = height + "px";
       changeElement(div);
     }
+    if (image) {
+      url = image.src;
+    }
     elem.style.backgroundColor = Graphics.toRGBA(_fillColor, _alpha);
-    elem.style.backgroundImage = image ? "url('" + image.src + ")" : "none";
+    elem.style.backgroundImage = url ? "url('" + url + "')" : "none";
     return elem;
   }
 
@@ -1326,18 +1347,18 @@ public class BitmapData implements IBitmapDrawable {
     if (!isCanvas) {
       isCanvas = true;
       var canvas:HTMLCanvasElement = HTMLCanvasElement(window.document.createElement("canvas"));
-      canvas.width = _width;
-      canvas.height = _height;
+      canvas.width = width;
+      canvas.height = height;
       canvas.style.position = "absolute";
       var context : CanvasRenderingContext2D = CanvasRenderingContext2D(canvas.getContext("2d"));
       if (_alpha > 0 || !transparent) {
         context.save();
         context.fillStyle = Graphics.toRGBA(_fillColor, _alpha);
-        context.fillRect(0, 0, _width, _height);
+        context.fillRect(0, 0, width, height);
         context.restore();
       }
       if (image) {
-        context.drawImage(image, imageOffsetX, imageOffsetY, _width, _height, 0, 0, _width, _height);
+        context.drawImage(image, imageOffsetX, imageOffsetY, width, height, 0, 0, width, height);
         image = null;
       }
       changeElement(canvas);
@@ -1363,11 +1384,8 @@ public class BitmapData implements IBitmapDrawable {
     }
   }
 
-  private var _transparent : Boolean;
   private var _fillColor : uint;
   private var _alpha : Number;
-  private var _width : int;
-  private var _height : int;
   private var elem : HTMLElement; // either div or canvas
   private var isCanvas : Boolean; // whether elem is a canvas
   private var image : HTMLImageElement; // only set if BitmapData if created from and image

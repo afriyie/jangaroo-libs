@@ -73,7 +73,7 @@ public class EventDispatcher implements IEventDispatcher {
    *
    */
   public function dispatchEvent(event:Event):Boolean {
-    event._target = this.target || this;
+    event.withTarget(this.target || this);
     var listeners:Array = this.listeners[event.type];
     if (listeners) {
       for (var i:int = 0; i < listeners.length; ++i) {
@@ -82,11 +82,11 @@ public class EventDispatcher implements IEventDispatcher {
           event.preventDefault();
         }
         if (event.isImmediatePropagationStopped()) {
-          return false;
+          break;
         }
       }
     }
-    return event.isDefaultPrevented();
+    return !event.isDefaultPrevented();
   }
 
   /**

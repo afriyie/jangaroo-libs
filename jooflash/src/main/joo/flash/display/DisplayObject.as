@@ -1,16 +1,14 @@
 package flash.display {
 import flash.accessibility.AccessibilityProperties;
-import flash.events.KeyboardEvent;
-
+import flash.events.Event;
 import flash.events.EventDispatcher;
+import flash.events.KeyboardEvent;
+import flash.events.MouseEvent;
 import flash.geom.Point;
 import flash.geom.Rectangle;
-
-import js.Event;
-import flash.events.Event;
-import flash.events.MouseEvent;
 import flash.geom.Transform;
 
+import js.Event;
 import js.HTMLElement;
 import js.Style;
 
@@ -416,7 +414,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    */
   public function set height(value:Number):void {
     var style:Style = getElement().style;
-    var oldHeight:Number = styleLengthToNumber(style.height);
+    var oldHeight:Number = this.height;
     if (!isNaN(value)) {
       if (style.paddingTop) {
         value -= styleLengthToNumber(style.paddingTop);
@@ -426,7 +424,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
       }
     }
     style.height = numberToStyleLength(value);
-    if (!isNaN(oldHeight) && !isNaN(value)) {
+    if (oldHeight && value) {
       _scaleY = value / oldHeight;
     }
   }
@@ -515,7 +513,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * </listing>
    */
   public function get mouseX():Number {
-    return 0; // TODO: implement!
+    return stage ? stage.mouseX / _scaleX : NaN;
   }
 
   /**
@@ -539,7 +537,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * </listing>
    */
   public function get mouseY():Number {
-    return 0; // TODO: implement!
+    return stage ? stage.mouseY / _scaleY : NaN;
   }
 
   /**
@@ -570,16 +568,12 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * }
    * </listing>
    */
-  public function get name():String {
-    return _name;
-  }
+  public native function get name():String;
 
   /**
    * @private
    */
-  public function set name(value:String):void {
-    _name = value;
-  }
+  public native function set name(value:String):void;
 
   /**
    * Specifies whether the display object is opaque with a certain background color. A transparent bitmap contains alpha channel data and is drawn transparently. An opaque bitmap has no alpha channel (and renders faster than a transparent bitmap). If the bitmap is opaque, you specify its own background color to use.
@@ -639,9 +633,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * trace(sprite3.parent.parent.name); // sprite1
    * </listing>
    */
-  public function get parent():DisplayObjectContainer {
-    return _parent;
-  }
+  public native function get parent():DisplayObjectContainer;
 
   /**
    * For a display object in a loaded SWF file, the <code>root</code> property is the top-most display object in the portion of the display list's tree structure represented by that SWF file. For a Bitmap object representing a loaded image file, the <code>root</code> property is the Bitmap object itself. For the instance of the main class of the first SWF file loaded, the <code>root</code> property is the display object itself. The <code>root</code> property of the Stage object is the Stage object itself. The <code>root</code> property is set to <code>null</code> for any display object that has not been added to the display list, unless it has been added to a display object container that is off the display list but that is a child of the top-most display object in a loaded SWF file.
@@ -846,7 +838,12 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * @private
    */
   public function set scaleX(value:Number):void {
-    width *= value / _scaleX; // sets _scaleX as a side-effect
+    var width:Number = this.width;
+    if (width) {
+      this.width = width * value / _scaleX; // sets _scaleX as a side-effect
+    } else {
+      _scaleX = value;
+    }
   }
 
   /**
@@ -878,7 +875,12 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * @private
    */
   public function set scaleY(value:Number):void {
-    height *= value / _scaleY; // sets _scaleY as a side-effect
+    var height:Number = this.height;
+    if (height) {
+      this.height = height * value / _scaleY; // sets _scaleY as a side-effect
+    } else {
+      _scaleY = value;
+    }
   }
 
   /**
@@ -944,7 +946,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * </listing>
    */
   public function get stage():Stage {
-    return this._parent ? this._parent.stage : null;
+    return parent ? parent.stage : null;
   }
 
   /**
@@ -1080,7 +1082,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    */
   public function set width(value:Number):void {
     var style:Style = getElement().style;
-    var oldWidth:Number = styleLengthToNumber(style.width);
+    var oldWidth:Number = this.width;
     if (!isNaN(value)) {
       if (style.paddingLeft) {
         value -= styleLengthToNumber(style.paddingLeft);
@@ -1090,7 +1092,7 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
       }
     }
     style.width = numberToStyleLength(value);
-    if (!isNaN(oldWidth) && !isNaN(value)) {
+    if (oldWidth && value) {
       _scaleX = value / oldWidth;
     }
   }
@@ -1133,9 +1135,9 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * @private
    */
   public function set x(value:Number):void {
-    this._x = isNaN(value) ? 0 : value;
+    this._x = value || 0;
     if (this._elem) {
-      this._elem.style.left = numberToStyleLength(value);
+      this._elem.style.left = this._x + "px";
     }
   }
 
@@ -1171,9 +1173,9 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
    * @private
    */
   public function set y(value:Number):void {
-    this._y = isNaN(value) ? 0 : value;
+    this._y = value || 0;
     if (this._elem) {
-      this._elem.style.top = numberToStyleLength(value);
+      this._elem.style.top = this._y + "px";
     }
   }
 
@@ -1414,8 +1416,13 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
   /**
    * @private
    */
-  public function set parent(parent : DisplayObjectContainer) : void {
-    _parent = parent;
+  public native function set parent(parent : DisplayObjectContainer) : void;
+
+  /**
+   * @private
+   */
+  public function broadcastEvent(event:flash.events.Event):Boolean {
+    return dispatchEvent(event);
   }
 
   private static const DOM_EVENT_TO_MOUSE_EVENT : Object/*<String,String>*/ = {
@@ -1561,8 +1568,8 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
     if (_elem) {
       elem.style.width = _elem.style.width;
       elem.style.height = _elem.style.height;
-      if (_parent) {
-        _parent.getElement().replaceChild(elem, _elem);
+      if (parent) {
+        parent.getElement().replaceChild(elem, _elem);
       }
     }
     _elem = elem;
@@ -1576,11 +1583,9 @@ public class DisplayObject extends EventDispatcher implements IBitmapDrawable {
   }
 
 
-  private var _parent : DisplayObjectContainer;
   private var _elem : HTMLElement;
   private var _x : Number = 0, _y : Number = 0;
   private var _transform : Transform;
-  private var _name : String;
   private var _visible: Boolean;
   private var _alpha: Number;
 }

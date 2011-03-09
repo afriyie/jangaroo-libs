@@ -671,32 +671,24 @@ public class Stage extends DisplayObjectContainer {
    * @throws SecurityError Calling the <code>showDefaultContextMenu</code> property of a Stage object throws an exception for any caller that is not in the same security sandbox as the Stage owner (the main SWF file). To avoid this, the Stage owner can grant permission to the domain of the caller by calling the <code>Security.allowDomain()</code> method or the <code>Security.allowInsecureDomain()</code> method. For more information, see the "Security" chapter in the <i>ActionScript 3.0 Developer's Guide</i>.
    *
    */
-  public function get showDefaultContextMenu():Boolean {
-    throw new Error('not implemented'); // TODO: implement!
-  }
+  public native function get showDefaultContextMenu():Boolean;
 
   /**
    * @private
    */
-  public function set showDefaultContextMenu(value:Boolean):void {
-    throw new Error('not implemented'); // TODO: implement!
-  }
+  public native function set showDefaultContextMenu(value:Boolean):void;
 
   /**
    * Specifies whether or not objects display a glowing border when they have focus.
    * @throws SecurityError Calling the <code>stageFocusRect</code> property of a Stage object throws an exception for any caller that is not in the same security sandbox as the Stage owner (the main SWF file). To avoid this, the Stage owner can grant permission to the domain of the caller by calling the <code>Security.allowDomain()</code> method or the <code>Security.allowInsecureDomain()</code> method. For more information, see the "Security" chapter in the <i>ActionScript 3.0 Developer's Guide</i>.
    *
    */
-  public function get stageFocusRect():Boolean {
-    throw new Error('not implemented'); // TODO: implement!
-  }
+  public native function get stageFocusRect():Boolean; // TODO: implement!
 
   /**
    * @private
    */
-  public function set stageFocusRect(value:Boolean):void {
-    throw new Error('not implemented'); // TODO: implement!
-  }
+  public native function set stageFocusRect(value:Boolean):void; // TODO: implement!
 
   /**
    * The current height, in pixels, of the Stage.
@@ -869,7 +861,7 @@ public class Stage extends DisplayObjectContainer {
    * @throws SecurityError Calling the <code>dispatchEvent()</code> method of a Stage object throws an exception for any caller that is not in the same security sandbox as the Stage owner (the main SWF file). To avoid this, the Stage owner can grant permission to the domain of the caller by calling the <code>Security.allowDomain()</code> method or the <code>Security.allowInsecureDomain()</code> method. For more information, see the "Security" chapter in the <i>ActionScript 3.0 Developer's Guide</i>.
    *
    */
-  override public function dispatchEvent(event:Event):Boolean {
+  override public function dispatchEvent(event:flash.events.Event):Boolean {
     return super.dispatchEvent(event);
   }
 
@@ -1031,7 +1023,25 @@ public class Stage extends DisplayObjectContainer {
       // TODO: check event.button property whether it was the "primary" mouse button!
       buttonDown = false;
     }, true);
+    element.addEventListener('mousemove', function(e:js.Event):void {
+      this._mouseX = e.clientX;
+      this._mouseY = e.clientY;
+    }, true);
     return element;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  override public function get mouseX():Number {
+    return _mouseX;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  override public function get mouseY():Number {
+    return _mouseY;
   }
 
   private function enterFrame() : void {
@@ -1040,6 +1050,8 @@ public class Stage extends DisplayObjectContainer {
 
   private var _stageHeight:int;
   private var _stageWidth:int;
+  private var _mouseX:int;
+  private var _mouseY:int;
   private var id : String;
   private var _frameRate : Number = 30;
   private var frameTimer : Timer;

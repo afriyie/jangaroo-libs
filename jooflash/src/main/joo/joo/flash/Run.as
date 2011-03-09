@@ -2,6 +2,7 @@ package joo.flash {
 import flash.display.DisplayObject;
 import flash.display.Stage;
 
+import flash.events.Event;
 import flash.utils.getDefinitionByName;
 
 import joo.DynamicClassLoader;
@@ -22,9 +23,10 @@ public class Run {
       var swf:Object = metadata['SWF'];
       var stage : Stage = new Stage(id, swf);
       // use Jangaroo tricks to add the DisplayObject to the Stage before its constructor is called:
-      var displayObject:DisplayObject = new cd.Public();
-      stage.addChild(displayObject);
+      var displayObject:DisplayObject = DisplayObject(new cd.Public());
+      stage.internalAddChildAt(displayObject, 0);
       cd.constructor_.call(displayObject);
+      displayObject.broadcastEvent(new Event(Event.ADDED_TO_STAGE, false, false));
     });
   }
 
